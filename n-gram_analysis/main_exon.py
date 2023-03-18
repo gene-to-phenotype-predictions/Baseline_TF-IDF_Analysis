@@ -54,7 +54,7 @@ print(ds.shape)
 corpus = ds.tolist()
 
 ngram_count = {}
-step = 1
+step = 100
 n = 1
 while True:
 

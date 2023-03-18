@@ -37,13 +37,15 @@ pd.options.display.max_rows = 10
 pd.options.display.max_colwidth = 100
 
 DATA_PATH = pathlib.Path('/data1/home/adpatter/gene-to-phenotype-predictions/adpatter/data/')
-PROTEIN_SEQ_PATH = DATA_PATH.joinpath('gene_symbol_protein_sequences.pkl')
+PROTEIN_SEQUENCE_PATH = DATA_PATH.joinpath('protein_sequences_effect_size_sample.pkl')
 
 # %%
-# pd.read_pickle(PROTEIN_SEQ_PATH)
+df = pd.read_pickle(PROTEIN_SEQUENCE_PATH)
+
+df_data = df.copy()
 
 # %%
-df = pd.read_pickle(PROTEIN_SEQ_PATH)
+df = df_data.copy()
 
 print(df.shape)
 
