@@ -40,22 +40,26 @@ DATA_PATH = pathlib.Path('/data1/home/adpatter/gene-to-phenotype-predictions/adp
 UNSPLICED_PATH = DATA_PATH.joinpath('gene_symbol_dna_sequence_unspliced.pkl')
 
 # %%
-# pd.read_pickle(UNSPLICED_PATH)
+pd.read_pickle(UNSPLICED_PATH)['Sequence'].str.len().max()
 
 # %%
+ngram_count = {}
+step = 1
+n = 1
+frac = .01
+
 df = pd.read_pickle(UNSPLICED_PATH)
 
 print(df.shape)
 
 ds = df['Sequence'].drop_duplicates()
 
+ds = ds.sample(frac=frac)
+
 print(ds.shape)
 
 corpus = ds.tolist()
 
-ngram_count = {}
-step = 1000
-n = 1
 while True:
 
     vectorizer = CountVectorizer(analyzer='char', ngram_range=(n,n))
@@ -72,7 +76,7 @@ while True:
 
     ngram_count[n] = {'features': X.shape[1], 'unique_features': unique_count}
 
-    with open(f'ngram_unspliced_{step}.pkl', 'wb') as f:
+    with open(f'ngram_unspliced_{step}_{frac}.pkl', 'wb') as f:
         pickle.dump(ngram_count, f, protocol=pickle.HIGHEST_PROTOCOL)
 
     if is_ones.all():
