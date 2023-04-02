@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
 
 import os as os
@@ -10,29 +10,23 @@ import re as re
 import pandas as pd
 import numpy as np
 import json as json
-import pathlib
-from sklearn.pipeline import Pipeline
 from sklearn.model_selection import GridSearchCV
 from sklearn.linear_model import LogisticRegression
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.linear_model import LinearRegression
-from sklearn.linear_model import Lasso
 from sklearn.svm import SVC
 from sklearn.dummy import DummyClassifier
 from sklearn.cluster import KMeans
 import seaborn as sns
 import matplotlib.pyplot as plt
-# from imblearn.over_sampling import SMOTE
-# from imblearn.pipeline import Pipeline
-# from imblearn.pipeline import make_pipeline
-# from sklearn.metrics import classification_report
-# from sklearn.model_selection import train_test_split
+from imblearn.over_sampling import SMOTE
+from imblearn.pipeline import Pipeline
+from sklearn.model_selection import train_test_split
 
 pd.options.display.max_columns = 100
 pd.options.display.min_rows = None
 pd.options.display.max_rows = 20
-pd.options.display.max_colwidth = 100
+pd.options.display.max_colwidth = 1000
 
 from config import RANDOM_STATE, MATERIALS_PATH, RESULTS_PATH
 
@@ -47,8 +41,6 @@ UNSPLICED_SEQUENCE_PATH = MATERIALS_PATH.joinpath('gene_symbol_dna_sequence_unsp
 
 df = pd.read_pickle(GENE_SYMBOL_EFFECT_SIZE)
 
-# df = df.sample(frac=.1)
-
 df = df.groupby(['gene_symbol_harmonized'])[['est_m_ea']].agg('mean')
 
 df = df.reset_index()
@@ -56,14 +48,6 @@ df = df.reset_index()
 kmeans = KMeans(n_clusters=3, random_state=RANDOM_STATE).fit(df[['est_m_ea']].to_numpy())
 
 df['class'] = kmeans.labels_
-
-print(df['class'].value_counts())
-
-class_min = df['class'].value_counts().min()
-
-df = df.groupby(['class']).sample(n=class_min)
-
-print(df['class'].value_counts())
 
 assert not df['gene_symbol_harmonized'].duplicated().any()
 
@@ -293,10 +277,12 @@ plt.savefig(RESULTS_PATH.joinpath(f'feature_density_analysis_{RANDOM_STATE}.png'
 
 def process(df, ngram_range, vocabulary):
 
+    dfs = []
+
     X = df['sequence'].to_numpy()
     y = df['class'].to_numpy()
 
-    dfs = []
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.20, random_state=RANDOM_STATE)
 
 
 
@@ -310,16 +296,22 @@ def process(df, ngram_range, vocabulary):
 
     pipe = Pipeline(steps=[
         ('tfidfVectorizer',  TfidfVectorizer(analyzer='char_wb', vocabulary=vocabulary)),
+        ('smote', SMOTE(random_state=RANDOM_STATE)),
         ('kNeighborsClassifier', KNeighborsClassifier())
         ])
 
     kNeighborsClassifier = GridSearchCV(estimator=pipe, param_grid=param_grid, n_jobs=5, verbose=3)
 
-    kNeighborsClassifier.fit(X, y)
+    kNeighborsClassifier.fit(X_train, y_train)
 
-    df = pd.DataFrame(kNeighborsClassifier.cv_results_)
+    accuracy_score = kNeighborsClassifier.score(X_test, y_test)
 
-    df['classifier'] = 'KNeighborsClassifier'
+    df = pd.DataFrame({
+        'classifier': 'KNeighborsClassifier',
+        'best_params_': [kNeighborsClassifier.best_params_],
+        'best_score_': kNeighborsClassifier.best_score_,
+        'test_score': accuracy_score
+    })
 
     dfs.append(df)
 
@@ -337,17 +329,23 @@ def process(df, ngram_range, vocabulary):
 
     pipe = Pipeline(steps=[
         ('tfidfVectorizer',  TfidfVectorizer(analyzer='char_wb', vocabulary=vocabulary)),
+        ('smote', SMOTE(random_state=RANDOM_STATE)),
         ('SVC', SVC())
         ])
 
     gsSVC = GridSearchCV(estimator=pipe, param_grid=param_grid, n_jobs=5, verbose=3)
 
-    gsSVC.fit(X, y)
+    gsSVC.fit(X_train, y_train)
 
-    df = pd.DataFrame(gsSVC.cv_results_)
+    accuracy_score = gsSVC.score(X_test, y_test)
 
-    df['classifier'] = 'SVC'
-
+    df = pd.DataFrame({
+        'classifier': 'SVC',
+        'best_params_': [gsSVC.best_params_],
+        'best_score_': gsSVC.best_score_,
+        'test_score': accuracy_score
+    })
+    
     dfs.append(df)
 
 
@@ -362,16 +360,22 @@ def process(df, ngram_range, vocabulary):
 
     pipe = Pipeline(steps=[
         ('tfidfVectorizer',  TfidfVectorizer(analyzer='char_wb', vocabulary=vocabulary)),
+        ('smote', SMOTE(random_state=RANDOM_STATE)),
         ('logisticRegression', LogisticRegression())
         ])
 
     gsLogisticRegression = GridSearchCV(estimator=pipe, param_grid=param_grid, n_jobs=5, verbose=3)
 
-    gsLogisticRegression.fit(X, y)
+    gsLogisticRegression.fit(X_train, y_train)
 
-    df = pd.DataFrame(gsLogisticRegression.cv_results_)
+    accuracy_score = gsLogisticRegression.score(X_test, y_test)
 
-    df['classifier'] = 'LogisticRegression'
+    df = pd.DataFrame({
+        'classifier': 'LogisticRegression',
+        'best_params_': [gsLogisticRegression.best_params_],
+        'best_score_': gsLogisticRegression.best_score_,
+        'test_score': accuracy_score
+    })
 
     dfs.append(df)
 
@@ -386,16 +390,22 @@ def process(df, ngram_range, vocabulary):
 
     pipe = Pipeline(steps=[
         ('tfidfVectorizer',  TfidfVectorizer(analyzer='char_wb', vocabulary=vocabulary)), 
+        ('smote', SMOTE(random_state=RANDOM_STATE)),
         ('dummyClassifier', DummyClassifier())
         ])
 
     gsDummyClassifier = GridSearchCV(estimator=pipe, param_grid=param_grid, n_jobs=5, verbose=3)
 
-    gsDummyClassifier.fit(X, y)
+    gsDummyClassifier.fit(X_train, y_train)
 
-    df = pd.DataFrame(gsDummyClassifier.cv_results_)
+    accuracy_score = gsDummyClassifier.score(X_test, y_test)
 
-    df['classifier'] = 'DummyClassifier'
+    df = pd.DataFrame({
+        'classifier': 'DummyClassifier',
+        'best_params_': [gsDummyClassifier.best_params_],
+        'best_score_': gsDummyClassifier.best_score_,
+        'test_score': accuracy_score
+    })
 
     dfs.append(df)
 
