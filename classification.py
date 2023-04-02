@@ -1,4 +1,9 @@
-# %%
+#!/usr/bin/env python
+# coding: utf-8
+
+# In[3]:
+
+
 import os as os
 import sys as sys
 import re as re
@@ -23,7 +28,7 @@ import time
 import copy
 import random
 from Bio import SeqIO
-# from sklearn.pipeline import Pipeline
+from sklearn.pipeline import Pipeline
 from sklearn.model_selection import GridSearchCV
 from sklearn.linear_model import LogisticRegression
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -37,9 +42,9 @@ from sklearn.dummy import DummyClassifier
 from sklearn.cluster import KMeans
 import seaborn as sns
 import matplotlib.pyplot as plt
-from imblearn.over_sampling import SMOTE
-from imblearn.pipeline import Pipeline
-from imblearn.pipeline import make_pipeline
+# from imblearn.over_sampling import SMOTE
+# from imblearn.pipeline import Pipeline
+# from imblearn.pipeline import make_pipeline
 from sklearn.metrics import classification_report
 
 
@@ -48,17 +53,17 @@ pd.options.display.min_rows = None
 pd.options.display.max_rows = 20
 pd.options.display.max_colwidth = 100
 
-DATA_PATH = pathlib.Path('/data1/home/adpatter/gene-to-phenotype-predictions/adpatter/data/')
-GENE_SYMBOL_EFFECT_SIZE = DATA_PATH.joinpath('capstone_body_weight_Statistical_effect_size_analysis_genotype_early_adult_scaled_13022023_gene_symbol_harmonized.pkl')
-PROTEIN_SEQUENCE_PATH = DATA_PATH.joinpath('gene_symbol_protein_sequences.pkl')
-EXON_SEQUENCE_PATH = DATA_PATH.joinpath('gene_symbol_dna_sequence_exon.pkl')
-UNSPLICED_SEQUENCE_PATH = DATA_PATH.joinpath('gene_symbol_dna_sequence_unspliced.pkl')
+from config import RANDOM_STATE, MATERIALS_PATH, RESULTS_PATH
 
-# %%
-RANDOM_STATE = random.randint(0,100)
-print(RANDOM_STATE)
+GENE_SYMBOL_EFFECT_SIZE = MATERIALS_PATH.joinpath('capstone_body_weight_Statistical_effect_size_analysis_genotype_early_adult_scaled_13022023_gene_symbol_harmonized.pkl')
+PROTEIN_SEQUENCE_PATH = MATERIALS_PATH.joinpath('gene_symbol_protein_sequences.pkl')
+EXON_SEQUENCE_PATH = MATERIALS_PATH.joinpath('gene_symbol_dna_sequence_exon.pkl')
+UNSPLICED_SEQUENCE_PATH = MATERIALS_PATH.joinpath('gene_symbol_dna_sequence_unspliced.pkl')
 
-# %%
+
+# In[ ]:
+
+
 df = pd.read_pickle(GENE_SYMBOL_EFFECT_SIZE)
 
 # df = df.sample(frac=.1)
@@ -67,17 +72,28 @@ df = df.groupby(['gene_symbol_harmonized'])[['est_m_ea']].agg('mean')
 
 df = df.reset_index()
 
-kmeans = KMeans(n_clusters=3, init=np.array([[df['est_m_ea'].min()],[0],[df['est_m_ea'].max()]]), random_state=RANDOM_STATE).fit(df[['est_m_ea']].to_numpy())
+kmeans = KMeans(n_clusters=3, random_state=RANDOM_STATE).fit(df[['est_m_ea']].to_numpy())
 
 df['class'] = kmeans.labels_
+
+sample_dfs.append(df['class'].value_counts())
+
+class_min = df['class'].value_counts().min()
+
+df = df.groupby(['class']).sample(n=class_min)
+
+sample_dfs.append(df['class'].value_counts())
 
 assert not df['gene_symbol_harmonized'].duplicated().any()
 
 _df_effect_size = df.copy()
 
-df.shape
+print(df.shape)
 
-# %%
+
+# In[ ]:
+
+
 df = pd.read_pickle(PROTEIN_SEQUENCE_PATH)
 
 df = df.rename({'seq': 'sequence'}, axis=1)
@@ -90,13 +106,18 @@ df = _df_effect_size.merge(df, how='inner')
 
 df = df[['gene_symbol_harmonized', 'est_m_ea', 'class', 'sequence']]
 
+sample_dfs.append(df['class'].value_counts())
+
 assert not df['gene_symbol_harmonized'].duplicated().any()
 
 _df_protein = df.copy()
 
-df.shape
+print(df.shape)
 
-# %%
+
+# In[ ]:
+
+
 df = pd.read_pickle(EXON_SEQUENCE_PATH)
 
 df = df.rename({'Sequence': 'sequence', 'Gene name': 'gene_symbol_harmonized'}, axis=1)
@@ -109,13 +130,18 @@ df = _df_effect_size.merge(df, how='inner')
 
 df = df[['gene_symbol_harmonized', 'est_m_ea', 'class', 'sequence']]
 
+sample_dfs.append(df['class'].value_counts())
+
 assert not df['gene_symbol_harmonized'].duplicated().any()
 
 _df_exon = df.copy()
 
-df.shape
+print(df.shape)
 
-# %%
+
+# In[ ]:
+
+
 df = pd.read_pickle(UNSPLICED_SEQUENCE_PATH)
 
 df = df.rename({'Sequence': 'sequence', 'Gene name': 'gene_symbol_harmonized'}, axis=1)
@@ -128,16 +154,19 @@ df = _df_effect_size.merge(df, how='inner')
 
 df = df[['gene_symbol_harmonized', 'est_m_ea', 'class', 'sequence']]
 
+sample_dfs.append(df['class'].value_counts())
+
 assert not df['gene_symbol_harmonized'].duplicated().any()
 
 _df_unspliced = df.copy()
 
-df.shape
+print(df.shape)
 
-# %%
+
+# In[ ]:
+
+
 df = _df_protein.copy()
-
-df = df.sample(frac=.025, random_state=RANDOM_STATE)
 
 df = df.rename({'est_m_ea': 'Effect Size', 'class': 'Class'}, axis=1)
 
@@ -149,8 +178,6 @@ _df_protein_strip_plot = df.copy()
 
 df = _df_exon.copy()
 
-df = df.sample(frac=.025, random_state=RANDOM_STATE)
-
 df = df.rename({'est_m_ea': 'Effect Size', 'class': 'Class'}, axis=1)
 
 df['Exon'] = ''
@@ -160,8 +187,6 @@ _df_exon_strip_plot = df.copy()
 
 
 df = _df_unspliced.copy()
-
-df = df.sample(frac=.025, random_state=RANDOM_STATE)
 
 df = df.rename({'est_m_ea': 'Effect Size', 'class': 'Class'}, axis=1)
 
@@ -176,20 +201,23 @@ sns.set_style('whitegrid')
 fig, (ax1, ax2, ax3) = plt.subplots(3,1)
 
 fig.suptitle('KMeans Clustering', fontsize='xx-large')
-fig.set_size_inches((10,5.5))
+fig.set_size_inches((10,4.5))
 fig.tight_layout()
 
-_ = sns.stripplot(data=_df_protein_strip_plot, x='Effect Size', y='Protein', hue="Class", marker='.', jitter=True,  ax=ax1)
+_ = sns.stripplot(data=_df_protein_strip_plot, x='Effect Size', y='Protein', hue="Class", marker='.', jitter=True, s=2, ax=ax1)
 _= ax1.legend(loc='right')
-_ = sns.stripplot(data=_df_exon_strip_plot, x='Effect Size', y='Exon', hue="Class", marker='.', jitter=True,  ax=ax2)
+_ = sns.stripplot(data=_df_exon_strip_plot, x='Effect Size', y='Exon', hue="Class", marker='.', jitter=True, s=2,  ax=ax2)
 _= ax2.legend(loc='right')
-_ = sns.stripplot(data=_df_unspliced_strip_plot, x='Effect Size', y='Unspliced', hue="Class", marker='.', jitter=True,  ax=ax3)
+_ = sns.stripplot(data=_df_unspliced_strip_plot, x='Effect Size', y='Unspliced', hue="Class", marker='.', jitter=True, s=2,  ax=ax3)
 _= ax3.legend(loc='right')
 
 plt.subplots_adjust(wspace=0.3, hspace=0.75)
-plt.savefig(f'kmeans_clustering_{RANDOM_STATE}.png')
+plt.savefig(RESULTS_PATH.joinpath(f'kmeans_clustering_{RANDOM_STATE}.png'), bbox_inches='tight')
 
-# %%
+
+# In[ ]:
+
+
 def feature_density(df, ngram_range):
 
     tfidf = TfidfVectorizer(analyzer='char_wb', ngram_range=ngram_range)
@@ -220,16 +248,28 @@ def feature_density(df, ngram_range):
 
     return df.copy()
 
-# %%
+
+# In[ ]:
+
+
 _df_protein_features = feature_density(df=_df_protein.copy(), ngram_range=(4,4))
 
-# %%
+
+# In[ ]:
+
+
 _df_exon_features = feature_density(df=_df_exon.copy(), ngram_range=(10,10))
 
-# %%
+
+# In[ ]:
+
+
 _df_unspliced_features = feature_density(df=_df_unspliced.sample(frac=.1, random_state=RANDOM_STATE).copy(), ngram_range=(12,12))
 
-# %%
+
+# In[ ]:
+
+
 sns.set_style('white')
 fig, (ax1, ax2, ax3) = plt.subplots(1, 3)
 
@@ -247,48 +287,29 @@ sns.barplot(data=_df_protein_features.copy(), x='Class', y='Count', alpha=0.5, a
 ax1.set_yscale("log")
 ax1.set_title('Protein Feature Density')
 ax1_twin = ax1.twinx()
-sns.lineplot(data=_df_protein_features, x='Class', y='Density', marker='o', label='Density', sort=False, ax=ax1_twin)
+sns.scatterplot(data=_df_protein_features, x='Class', y='Density', marker='d', label='Density', color = 'red', s=150, ax=ax1_twin)
 _= ax1_twin.legend(loc='upper right')
 
 sns.barplot(data=_df_exon_features.copy(), x='Class', y='Count', alpha=0.5, ax=ax2)
 ax2.set_yscale("log")
 ax2.set_title('Exon Feature Density')
 ax2_twin = ax2.twinx()
-sns.lineplot(data=_df_exon_features, x='Class', y='Density', marker='o', label='Density', sort = False, ax=ax2_twin)
+sns.scatterplot(data=_df_exon_features, x='Class', y='Density', marker='d', label='Density', color = 'red', s=150, ax=ax2_twin)
 _= ax2_twin.legend(loc='upper right')
 
 sns.barplot(data=_df_unspliced_features.copy(), x='Class', y='Count', alpha=0.5, ax=ax3)
 ax3.set_yscale("log")
 ax3.set_title('Unspliced Feature Density')
 ax3_twin = ax3.twinx()
-sns.lineplot(data=_df_unspliced_features, x='Class', y='Density', marker='o', label='Density', sort = False, ax=ax3_twin)
+sns.scatterplot(data=_df_unspliced_features, x='Class', y='Density', marker='d', label='Density', color = 'red', s=150, ax=ax3_twin)
 _= ax3_twin.legend(loc='upper right')
-plt.savefig(f'feature_density_analysis_{RANDOM_STATE}.png')
 
-# %%
-df = _df_protein_features.copy()
-
-df = df.loc[df['Density'] != df['Density'].min()]
-
-protein_vocabulary = df['Features'].sum()
+plt.savefig(RESULTS_PATH.joinpath(f'feature_density_analysis_{RANDOM_STATE}.png'), bbox_inches='tight')
 
 
-
-df = _df_exon_features.copy()
-
-df = df.loc[df['Density'] != df['Density'].min()]
-
-exon_vocabulary = df['Features'].sum()
+# In[ ]:
 
 
-
-df = _df_unspliced_features.copy()
-
-df = df.loc[df['Density'] != df['Density'].min()]
-
-unspliced_vocabulary = df['Features'].sum()
-
-# %%
 def process(df, ngram_range, vocabulary):
 
     X = df['sequence'].to_numpy()
@@ -311,7 +332,7 @@ def process(df, ngram_range, vocabulary):
         ('kNeighborsClassifier', KNeighborsClassifier())
         ])
 
-    kNeighborsClassifier = GridSearchCV(estimator=pipe, param_grid=param_grid, n_jobs=5, verbose=3, refit=False, scoring=['accuracy', 'recall_macro', 'precision_macro'])
+    kNeighborsClassifier = GridSearchCV(estimator=pipe, param_grid=param_grid, n_jobs=5, verbose=3)
 
     kNeighborsClassifier.fit(X, y)
 
@@ -335,11 +356,10 @@ def process(df, ngram_range, vocabulary):
 
     pipe = Pipeline(steps=[
         ('tfidfVectorizer',  TfidfVectorizer(analyzer='char_wb', vocabulary=vocabulary)),
-        ('smote', SMOTE(random_state=RANDOM_STATE)),
         ('SVC', SVC())
         ])
 
-    gsSVC = GridSearchCV(estimator=pipe, param_grid=param_grid, n_jobs=5, verbose=3, refit=False, scoring=['accuracy', 'recall_macro', 'precision_macro'])
+    gsSVC = GridSearchCV(estimator=pipe, param_grid=param_grid, n_jobs=5, verbose=3)
 
     gsSVC.fit(X, y)
 
@@ -364,7 +384,7 @@ def process(df, ngram_range, vocabulary):
         ('logisticRegression', LogisticRegression())
         ])
 
-    gsLogisticRegression = GridSearchCV(estimator=pipe, param_grid=param_grid, n_jobs=5, verbose=3, refit=False, scoring=['accuracy', 'recall_macro', 'precision_macro'])
+    gsLogisticRegression = GridSearchCV(estimator=pipe, param_grid=param_grid, n_jobs=5, verbose=3)
 
     gsLogisticRegression.fit(X, y)
 
@@ -385,11 +405,10 @@ def process(df, ngram_range, vocabulary):
 
     pipe = Pipeline(steps=[
         ('tfidfVectorizer',  TfidfVectorizer(analyzer='char_wb', vocabulary=vocabulary)), 
-        ('smote', SMOTE(random_state=RANDOM_STATE)),
         ('dummyClassifier', DummyClassifier())
         ])
 
-    gsDummyClassifier = GridSearchCV(estimator=pipe, param_grid=param_grid, n_jobs=5, verbose=3, refit=False, scoring=['accuracy', 'recall_macro', 'precision_macro'])
+    gsDummyClassifier = GridSearchCV(estimator=pipe, param_grid=param_grid, n_jobs=5, verbose=3)
 
     gsDummyClassifier.fit(X, y)
 
@@ -407,40 +426,53 @@ def process(df, ngram_range, vocabulary):
 
     return df.copy()
 
-# %%
+
+# In[ ]:
+
+
+df = _df_protein_features.copy()
+
+df = df.loc[df['Density'] != df['Density'].min()]
+
+protein_vocabulary = df['Features'].sum()
+
 df = _df_protein.copy()
 
 df = process(df, (4,4), vocabulary=protein_vocabulary)
 
-df.to_pickle(f'classification_protein_{RANDOM_STATE}.pkl')
+df.to_pickle(RESULTS_PATH.joinpath(f'classification_protein_{RANDOM_STATE}.pkl'))
 
-# %%
+
+# In[ ]:
+
+
+df = _df_exon_features.copy()
+
+df = df.loc[df['Density'] != df['Density'].min()]
+
+exon_vocabulary = df['Features'].sum()
+
 df = _df_exon.copy()
 
 df = process(df, (10,10), vocabulary=exon_vocabulary)
 
-df.to_pickle(f'classification_exon_{RANDOM_STATE}.pkl')
+df.to_pickle(RESULTS_PATH.joinpath(f'classification_exon_{RANDOM_STATE}.pkl'))
 
-# %%
+
+# In[ ]:
+
+
+df = _df_unspliced_features.copy()
+
+df = df.loc[df['Density'] != df['Density'].min()]
+
+unspliced_vocabulary = df['Features'].sum()
+
+df = _df_exon.copy()
+
 df = _df_unspliced.copy()
 
 df = process(df, (12,12), vocabulary=unspliced_vocabulary)
 
-df.to_pickle(f'classification_unspliced_{RANDOM_STATE}.pkl')
-
-# %%
-# df = pd.read_pickle(f'classification_protein_92.pkl')
-
-# # df = df.groupby(['classifier']).apply(lambda x: x.loc[x['mean_test_score'] == x['mean_test_score'].max()].iloc[0:1] if x.name != 'DummyClassifier' else x)
-
-# df = df[['classifier', 'params', 'mean_test_score', 'std_test_score']]
-
-# df = df.loc[df['classifier'] != 'DummyClassifier']
-# df = df.reset_index(drop=True)
-
-# df.describe()
-
-# %%
-
-
+df.to_pickle(RESULTS_PATH.joinpath(f'classification_unspliced_{RANDOM_STATE}.pkl'))
 
