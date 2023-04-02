@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[ ]:
+# In[5]:
 
 
 import os as os
@@ -36,7 +36,7 @@ EXON_SEQUENCE_PATH = MATERIALS_PATH.joinpath('gene_symbol_dna_sequence_exon.pkl'
 UNSPLICED_SEQUENCE_PATH = MATERIALS_PATH.joinpath('gene_symbol_dna_sequence_unspliced.pkl')
 
 
-# In[ ]:
+# In[6]:
 
 
 df = pd.read_pickle(GENE_SYMBOL_EFFECT_SIZE)
@@ -56,7 +56,7 @@ _df_effect_size = df.copy()
 print(df.shape)
 
 
-# In[ ]:
+# In[7]:
 
 
 df = pd.read_pickle(PROTEIN_SEQUENCE_PATH)
@@ -80,7 +80,7 @@ _df_protein = df.copy()
 print(df.shape)
 
 
-# In[ ]:
+# In[8]:
 
 
 df = pd.read_pickle(EXON_SEQUENCE_PATH)
@@ -104,7 +104,7 @@ _df_exon = df.copy()
 print(df.shape)
 
 
-# In[ ]:
+# In[9]:
 
 
 df = pd.read_pickle(UNSPLICED_SEQUENCE_PATH)
@@ -128,7 +128,7 @@ _df_unspliced = df.copy()
 print(df.shape)
 
 
-# In[ ]:
+# In[12]:
 
 
 df = _df_protein.copy()
@@ -162,7 +162,7 @@ _df_unspliced_strip_plot = df.copy()
 
 
 sns.set_style('whitegrid')
-
+sns.set_palette('tab10')
 fig, (ax1, ax2, ax3) = plt.subplots(3,1)
 
 fig.suptitle('KMeans Clustering', fontsize='xx-large')
@@ -236,6 +236,8 @@ _df_unspliced_features = feature_density(df=_df_unspliced.sample(frac=.1, random
 
 
 sns.set_style('white')
+sns.set_palette('tab10')
+
 fig, (ax1, ax2, ax3) = plt.subplots(1, 3)
 
 ax1.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
