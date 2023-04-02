@@ -2,7 +2,7 @@
 
 ## Introduction
 
-The Baseline TF-IDF Analysis provides baseline scoring using conventional machine learning classifiers and methods.
+The Baseline TF-IDF Analysis (WP3) provides baseline scoring using conventional machine learning classifiers and methods.
 
 ## Installation
 
