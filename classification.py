@@ -162,18 +162,17 @@ _df_unspliced_strip_plot = df.copy()
 
 
 sns.set_style('whitegrid')
-sns.set_palette('tab10')
 fig, (ax1, ax2, ax3) = plt.subplots(3,1)
 
 fig.suptitle('KMeans Clustering', fontsize='xx-large')
 fig.set_size_inches((10,4.5))
 fig.tight_layout()
 
-_ = sns.stripplot(data=_df_protein_strip_plot, x='Effect Size', y='Protein', hue="Class", marker='.', jitter=True, s=2, ax=ax1)
+_ = sns.stripplot(data=_df_protein_strip_plot, x='Effect Size', y='Protein', hue="Class", marker='.', jitter=True, s=2, ax=ax1, palette='tab10')
 _= ax1.legend(loc='right')
-_ = sns.stripplot(data=_df_exon_strip_plot, x='Effect Size', y='Exon', hue="Class", marker='.', jitter=True, s=2,  ax=ax2)
+_ = sns.stripplot(data=_df_exon_strip_plot, x='Effect Size', y='Exon', hue="Class", marker='.', jitter=True, s=2,  ax=ax2, palette='tab10')
 _= ax2.legend(loc='right')
-_ = sns.stripplot(data=_df_unspliced_strip_plot, x='Effect Size', y='Unspliced', hue="Class", marker='.', jitter=True, s=2,  ax=ax3)
+_ = sns.stripplot(data=_df_unspliced_strip_plot, x='Effect Size', y='Unspliced', hue="Class", marker='.', jitter=True, s=2,  ax=ax3, palette='tab10')
 _= ax3.legend(loc='right')
 
 plt.subplots_adjust(wspace=0.3, hspace=0.75)
@@ -236,7 +235,6 @@ _df_unspliced_features = feature_density(df=_df_unspliced.sample(frac=.1, random
 
 
 sns.set_style('white')
-sns.set_palette('tab10')
 
 fig, (ax1, ax2, ax3) = plt.subplots(1, 3)
 
@@ -250,25 +248,25 @@ fig.subplots_adjust(top=.85)
 
 plt.subplots_adjust(wspace=0.3, hspace=0.3)
 
-sns.barplot(data=_df_protein_features.copy(), x='Class', y='Count', alpha=0.5, ax=ax1)
+sns.barplot(data=_df_protein_features.copy(), x='Class', y='Count', alpha=0.5, ax=ax1, palette='tab10')
 ax1.set_yscale("log")
 ax1.set_title('Protein Feature Density')
 ax1_twin = ax1.twinx()
-sns.scatterplot(data=_df_protein_features, x='Class', y='Density', marker='d', label='Density', color = 'red', s=150, ax=ax1_twin)
+sns.scatterplot(data=_df_protein_features, x='Class', y='Density', marker='d', label='Density', color = 'red', s=150, ax=ax1_twin, palette='tab10')
 _= ax1_twin.legend(loc='upper right')
 
-sns.barplot(data=_df_exon_features.copy(), x='Class', y='Count', alpha=0.5, ax=ax2)
+sns.barplot(data=_df_exon_features.copy(), x='Class', y='Count', alpha=0.5, ax=ax2, palette='tab10')
 ax2.set_yscale("log")
 ax2.set_title('Exon Feature Density')
 ax2_twin = ax2.twinx()
-sns.scatterplot(data=_df_exon_features, x='Class', y='Density', marker='d', label='Density', color = 'red', s=150, ax=ax2_twin)
+sns.scatterplot(data=_df_exon_features, x='Class', y='Density', marker='d', label='Density', color = 'red', s=150, ax=ax2_twin, palette='tab10')
 _= ax2_twin.legend(loc='upper right')
 
-sns.barplot(data=_df_unspliced_features.copy(), x='Class', y='Count', alpha=0.5, ax=ax3)
+sns.barplot(data=_df_unspliced_features.copy(), x='Class', y='Count', alpha=0.5, ax=ax3, palette='tab10')
 ax3.set_yscale("log")
 ax3.set_title('Unspliced Feature Density')
 ax3_twin = ax3.twinx()
-sns.scatterplot(data=_df_unspliced_features, x='Class', y='Density', marker='d', label='Density', color = 'red', s=150, ax=ax3_twin)
+sns.scatterplot(data=_df_unspliced_features, x='Class', y='Density', marker='d', label='Density', color = 'red', s=150, ax=ax3_twin, palette='tab10')
 _= ax3_twin.legend(loc='upper right')
 
 plt.savefig(RESULTS_PATH.joinpath(f'feature_density_analysis_{RANDOM_STATE}.png'), bbox_inches='tight')
