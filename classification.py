@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[3]:
+# In[1]:
 
 
 import os as os
@@ -10,30 +10,11 @@ import re as re
 import pandas as pd
 import numpy as np
 import json as json
-import pickle
-import urllib as urllib
-import zlib as zlib
-import base64 as base64
-from requests import Request, Session
-import requests
-from numpy import trapz
-import itertools
-import zlib as zlib
-import base64 as base64
-import pickle
 import pathlib
-from tqdm import tqdm
-from datetime import datetime
-import time
-import copy
-import random
-from Bio import SeqIO
 from sklearn.pipeline import Pipeline
 from sklearn.model_selection import GridSearchCV
 from sklearn.linear_model import LogisticRegression
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.model_selection import train_test_split
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.linear_model import LinearRegression
 from sklearn.linear_model import Lasso
@@ -45,8 +26,8 @@ import matplotlib.pyplot as plt
 # from imblearn.over_sampling import SMOTE
 # from imblearn.pipeline import Pipeline
 # from imblearn.pipeline import make_pipeline
-from sklearn.metrics import classification_report
-
+# from sklearn.metrics import classification_report
+# from sklearn.model_selection import train_test_split
 
 pd.options.display.max_columns = 100
 pd.options.display.min_rows = None
@@ -76,13 +57,13 @@ kmeans = KMeans(n_clusters=3, random_state=RANDOM_STATE).fit(df[['est_m_ea']].to
 
 df['class'] = kmeans.labels_
 
-sample_dfs.append(df['class'].value_counts())
+print(df['class'].value_counts())
 
 class_min = df['class'].value_counts().min()
 
 df = df.groupby(['class']).sample(n=class_min)
 
-sample_dfs.append(df['class'].value_counts())
+print(df['class'].value_counts())
 
 assert not df['gene_symbol_harmonized'].duplicated().any()
 
@@ -106,7 +87,7 @@ df = _df_effect_size.merge(df, how='inner')
 
 df = df[['gene_symbol_harmonized', 'est_m_ea', 'class', 'sequence']]
 
-sample_dfs.append(df['class'].value_counts())
+print(df['class'].value_counts())
 
 assert not df['gene_symbol_harmonized'].duplicated().any()
 
@@ -130,7 +111,7 @@ df = _df_effect_size.merge(df, how='inner')
 
 df = df[['gene_symbol_harmonized', 'est_m_ea', 'class', 'sequence']]
 
-sample_dfs.append(df['class'].value_counts())
+print(df['class'].value_counts())
 
 assert not df['gene_symbol_harmonized'].duplicated().any()
 
@@ -154,7 +135,7 @@ df = _df_effect_size.merge(df, how='inner')
 
 df = df[['gene_symbol_harmonized', 'est_m_ea', 'class', 'sequence']]
 
-sample_dfs.append(df['class'].value_counts())
+print(df['class'].value_counts())
 
 assert not df['gene_symbol_harmonized'].duplicated().any()
 
@@ -417,6 +398,7 @@ def process(df, ngram_range, vocabulary):
     df['classifier'] = 'DummyClassifier'
 
     dfs.append(df)
+
 
 
 
