@@ -1,15 +1,11 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[5]:
-
-
+# %%
 import os as os
 import sys as sys
 import re as re
 import pandas as pd
 import numpy as np
 import json as json
+import pickle
 from sklearn.model_selection import GridSearchCV
 from sklearn.linear_model import LogisticRegression
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -22,6 +18,8 @@ import matplotlib.pyplot as plt
 from imblearn.over_sampling import SMOTE
 from imblearn.pipeline import Pipeline
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import classification_report
+from sklearn.metrics import confusion_matrix
 
 pd.options.display.max_columns = 100
 pd.options.display.min_rows = None
@@ -35,15 +33,16 @@ PROTEIN_SEQUENCE_PATH = MATERIALS_PATH.joinpath('gene_symbol_protein_sequences.p
 EXON_SEQUENCE_PATH = MATERIALS_PATH.joinpath('gene_symbol_dna_sequence_exon.pkl')
 UNSPLICED_SEQUENCE_PATH = MATERIALS_PATH.joinpath('gene_symbol_dna_sequence_unspliced.pkl')
 
+FRAC = 1
 
-# In[6]:
-
-
+# %%
 df = pd.read_pickle(GENE_SYMBOL_EFFECT_SIZE)
 
 df = df.groupby(['gene_symbol_harmonized'])[['est_m_ea']].agg('mean')
 
 df = df.reset_index()
+
+df = df.sample(frac=FRAC, random_state=RANDOM_STATE)
 
 kmeans = KMeans(n_clusters=3, random_state=RANDOM_STATE).fit(df[['est_m_ea']].to_numpy())
 
@@ -55,10 +54,7 @@ _df_effect_size = df.copy()
 
 print(df.shape)
 
-
-# In[7]:
-
-
+# %%
 df = pd.read_pickle(PROTEIN_SEQUENCE_PATH)
 
 df = df.rename({'seq': 'sequence'}, axis=1)
@@ -79,10 +75,7 @@ _df_protein = df.copy()
 
 print(df.shape)
 
-
-# In[8]:
-
-
+# %%
 df = pd.read_pickle(EXON_SEQUENCE_PATH)
 
 df = df.rename({'Sequence': 'sequence', 'Gene name': 'gene_symbol_harmonized'}, axis=1)
@@ -103,10 +96,7 @@ _df_exon = df.copy()
 
 print(df.shape)
 
-
-# In[9]:
-
-
+# %%
 df = pd.read_pickle(UNSPLICED_SEQUENCE_PATH)
 
 df = df.rename({'Sequence': 'sequence', 'Gene name': 'gene_symbol_harmonized'}, axis=1)
@@ -127,10 +117,7 @@ _df_unspliced = df.copy()
 
 print(df.shape)
 
-
-# In[12]:
-
-
+# %%
 df = _df_protein.copy()
 
 df = df.rename({'est_m_ea': 'Effect Size', 'class': 'Class'}, axis=1)
@@ -176,12 +163,9 @@ _ = sns.stripplot(data=_df_unspliced_strip_plot, x='Effect Size', y='Unspliced',
 _= ax3.legend(loc='right')
 
 plt.subplots_adjust(wspace=0.3, hspace=0.75)
-plt.savefig(RESULTS_PATH.joinpath(f'kmeans_clustering_{RANDOM_STATE}.png'), bbox_inches='tight')
+plt.savefig(RESULTS_PATH.joinpath(f'kmeans_clustering_{FRAC}_{RANDOM_STATE}.png'), bbox_inches='tight')
 
-
-# In[ ]:
-
-
+# %%
 def feature_density(df, ngram_range):
 
     tfidf = TfidfVectorizer(analyzer='char_wb', ngram_range=ngram_range)
@@ -212,28 +196,16 @@ def feature_density(df, ngram_range):
 
     return df.copy()
 
-
-# In[ ]:
-
-
+# %%
 _df_protein_features = feature_density(df=_df_protein.copy(), ngram_range=(4,4))
 
-
-# In[ ]:
-
-
+# %%
 _df_exon_features = feature_density(df=_df_exon.copy(), ngram_range=(10,10))
 
-
-# In[ ]:
-
-
+# %%
 _df_unspliced_features = feature_density(df=_df_unspliced.sample(frac=.1, random_state=RANDOM_STATE).copy(), ngram_range=(12,12))
 
-
-# In[ ]:
-
-
+# %%
 sns.set_style('white')
 
 fig, (ax1, ax2, ax3) = plt.subplots(1, 3)
@@ -269,159 +241,31 @@ ax3_twin = ax3.twinx()
 sns.scatterplot(data=_df_unspliced_features, x='Class', y='Density', marker='d', label='Density', color = 'red', s=150, ax=ax3_twin, palette='tab10')
 _= ax3_twin.legend(loc='upper right')
 
-plt.savefig(RESULTS_PATH.joinpath(f'feature_density_analysis_{RANDOM_STATE}.png'), bbox_inches='tight')
+plt.savefig(RESULTS_PATH.joinpath(f'feature_density_analysis_{FRAC}_{RANDOM_STATE}.png'), bbox_inches='tight')
 
+# %%
+def train_tfidf_smote_estimator_grid(est_grid, X_train, y_train, analyzer, vocabulary, random_state=RANDOM_STATE):
 
-# In[ ]:
+    estimator_model = {}
 
-
-def process(df, ngram_range, vocabulary):
-
-    dfs = []
-
-    X = df['sequence'].to_numpy()
-    y = df['class'].to_numpy()
-
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.20, random_state=RANDOM_STATE)
-
-
-
-
-    # KNeighborsClassifier
-    param_grid = {
-    'tfidfVectorizer__ngram_range': [ngram_range],
-    'tfidfVectorizer__norm': ('l1', 'l2'),
-    'kNeighborsClassifier__n_neighbors': [3, 5, 9]
-    }
-
-    pipe = Pipeline(steps=[
-        ('tfidfVectorizer',  TfidfVectorizer(analyzer='char_wb', vocabulary=vocabulary)),
-        ('smote', SMOTE(random_state=RANDOM_STATE)),
-        ('kNeighborsClassifier', KNeighborsClassifier())
+    for est, param_grid in est_grid.items():
+        
+        pipeline = Pipeline(steps=[
+            ('TfidfVectorizer', TfidfVectorizer(analyzer='char_wb', vocabulary=vocabulary)),
+            ('SMOTE', SMOTE(random_state=RANDOM_STATE)),
+            (est.__class__.__name__, est)
         ])
 
-    kNeighborsClassifier = GridSearchCV(estimator=pipe, param_grid=param_grid, n_jobs=5, verbose=3)
+        model = GridSearchCV(estimator=pipeline, param_grid=param_grid, n_jobs=5, verbose=4)
 
-    kNeighborsClassifier.fit(X_train, y_train)
+        model.fit(X_train, y_train)
 
-    accuracy_score = kNeighborsClassifier.score(X_test, y_test)
+        estimator_model[est] = model
 
-    df = pd.DataFrame({
-        'classifier': 'KNeighborsClassifier',
-        'best_params_': [kNeighborsClassifier.best_params_],
-        'best_score_': kNeighborsClassifier.best_score_,
-        'test_score': accuracy_score
-    })
+    return estimator_model
+        
 
-    dfs.append(df)
-
-
-
-
-    # SVC
-    param_grid = {
-        'tfidfVectorizer__ngram_range': [ngram_range],
-        'tfidfVectorizer__norm': ('l1', 'l2'),
-        'SVC__kernel': ['linear', 'rbf'],
-        'SVC__C': [0.001,0.01,0.1,1,10,100, 1000],
-        'SVC__gamma': ['scale', 'auto']
-    }
-
-    pipe = Pipeline(steps=[
-        ('tfidfVectorizer',  TfidfVectorizer(analyzer='char_wb', vocabulary=vocabulary)),
-        ('smote', SMOTE(random_state=RANDOM_STATE)),
-        ('SVC', SVC())
-        ])
-
-    gsSVC = GridSearchCV(estimator=pipe, param_grid=param_grid, n_jobs=5, verbose=3)
-
-    gsSVC.fit(X_train, y_train)
-
-    accuracy_score = gsSVC.score(X_test, y_test)
-
-    df = pd.DataFrame({
-        'classifier': 'SVC',
-        'best_params_': [gsSVC.best_params_],
-        'best_score_': gsSVC.best_score_,
-        'test_score': accuracy_score
-    })
-    
-    dfs.append(df)
-
-
-
-
-    # LogisticRegression
-    param_grid = {
-    'tfidfVectorizer__ngram_range': [ngram_range],
-    'tfidfVectorizer__norm': ('l1', 'l2'),
-    'logisticRegression__C': [0.001, 0.01, 0.1, 1, 10, 100, 1000]
-    }
-
-    pipe = Pipeline(steps=[
-        ('tfidfVectorizer',  TfidfVectorizer(analyzer='char_wb', vocabulary=vocabulary)),
-        ('smote', SMOTE(random_state=RANDOM_STATE)),
-        ('logisticRegression', LogisticRegression())
-        ])
-
-    gsLogisticRegression = GridSearchCV(estimator=pipe, param_grid=param_grid, n_jobs=5, verbose=3)
-
-    gsLogisticRegression.fit(X_train, y_train)
-
-    accuracy_score = gsLogisticRegression.score(X_test, y_test)
-
-    df = pd.DataFrame({
-        'classifier': 'LogisticRegression',
-        'best_params_': [gsLogisticRegression.best_params_],
-        'best_score_': gsLogisticRegression.best_score_,
-        'test_score': accuracy_score
-    })
-
-    dfs.append(df)
-
-
-
-
-    # DummyClassifier
-    param_grid = {
-        'tfidfVectorizer__ngram_range': [ngram_range],
-        'dummyClassifier__strategy': ['uniform', 'most_frequent']
-    }
-
-    pipe = Pipeline(steps=[
-        ('tfidfVectorizer',  TfidfVectorizer(analyzer='char_wb', vocabulary=vocabulary)), 
-        ('smote', SMOTE(random_state=RANDOM_STATE)),
-        ('dummyClassifier', DummyClassifier())
-        ])
-
-    gsDummyClassifier = GridSearchCV(estimator=pipe, param_grid=param_grid, n_jobs=5, verbose=3)
-
-    gsDummyClassifier.fit(X_train, y_train)
-
-    accuracy_score = gsDummyClassifier.score(X_test, y_test)
-
-    df = pd.DataFrame({
-        'classifier': 'DummyClassifier',
-        'best_params_': [gsDummyClassifier.best_params_],
-        'best_score_': gsDummyClassifier.best_score_,
-        'test_score': accuracy_score
-    })
-
-    dfs.append(df)
-
-
-
-
-    df = pd.concat(dfs)
-
-    df = df.set_index(['classifier']).reset_index()
-
-    return df.copy()
-
-
-# In[ ]:
-
-
+# %%
 df = _df_protein_features.copy()
 
 df = df.loc[df['Density'] != df['Density'].min()]
@@ -430,14 +274,58 @@ protein_vocabulary = df['Features'].sum()
 
 df = _df_protein.copy()
 
-df = process(df, (4,4), vocabulary=protein_vocabulary)
+X = df['sequence'].to_numpy()
 
-df.to_pickle(RESULTS_PATH.joinpath(f'classification_protein_{RANDOM_STATE}.pkl'))
+y = df['class'].to_numpy()
 
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.20, random_state=RANDOM_STATE)
 
-# In[ ]:
+ngram_range = (4,4)
 
+est_grid = {
+    KNeighborsClassifier(): {
+        'TfidfVectorizer__norm': ('l1', 'l2'),
+        'TfidfVectorizer__ngram_range': [ngram_range],
+        'KNeighborsClassifier__n_neighbors': [3, 5, 9]
+    },
+    LogisticRegression(): {
+        'TfidfVectorizer__norm': ('l1', 'l2'),
+        'TfidfVectorizer__ngram_range': [ngram_range],
+        'LogisticRegression__C': [0.001, 0.01, 0.1, 1, 10, 100, 1000]
+    },
+    SVC(): {
+        'TfidfVectorizer__norm': ('l1', 'l2'),
+        'TfidfVectorizer__ngram_range': [ngram_range],
+        'SVC__kernel': ['linear', 'rbf'],
+        'SVC__C': [0.001, 0.01, 0.1, 1, 10, 100, 1000],
+        'SVC__gamma': ['scale', 'auto']
+    },
+    DummyClassifier(): {
+        'TfidfVectorizer__norm': ('l1', 'l2'),
+        'TfidfVectorizer__ngram_range':[ngram_range],
+        'DummyClassifier__strategy': ['most_frequent']
+    },
+    DummyClassifier(): {
+        'TfidfVectorizer__norm': ('l1', 'l2'),
+        'TfidfVectorizer__ngram_range': [ngram_range],
+        'DummyClassifier__strategy': ['uniform']
+    }
+}
 
+estimator_model = train_tfidf_smote_estimator_grid(est_grid=est_grid, X_train=X_train, y_train=y_train, analyzer='char_wb', vocabulary=protein_vocabulary)
+
+with open(RESULTS_PATH.joinpath(f'protein_{FRAC}_{RANDOM_STATE}.pkl'), 'wb') as f:
+    pickle.dump({
+        'RANDOM_STATE': RANDOM_STATE,
+        'X_train': X_train,
+        'y_train': y_train,
+        'X_test': X_test,
+        'y_test': y_test,
+        'estimator_model': estimator_model
+    }, f)
+
+# %%
 df = _df_exon_features.copy()
 
 df = df.loc[df['Density'] != df['Density'].min()]
@@ -446,25 +334,115 @@ exon_vocabulary = df['Features'].sum()
 
 df = _df_exon.copy()
 
-df = process(df, (10,10), vocabulary=exon_vocabulary)
+X = df['sequence'].to_numpy()
 
-df.to_pickle(RESULTS_PATH.joinpath(f'classification_exon_{RANDOM_STATE}.pkl'))
+y = df['class'].to_numpy()
 
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.20, random_state=RANDOM_STATE)
 
-# In[ ]:
+ngram_range = (10,10)
 
+est_grid = {
+    KNeighborsClassifier(): {
+        'TfidfVectorizer__norm': ('l1', 'l2'),
+        'TfidfVectorizer__ngram_range': [ngram_range],
+        'KNeighborsClassifier__n_neighbors': [3, 5, 9]
+    },
+    LogisticRegression(): {
+        'TfidfVectorizer__norm': ('l1', 'l2'),
+        'TfidfVectorizer__ngram_range': [ngram_range],
+        'LogisticRegression__C': [0.001, 0.01, 0.1, 1, 10, 100, 1000]
+    },
+    SVC(): {
+        'TfidfVectorizer__norm': ('l1', 'l2'),
+        'TfidfVectorizer__ngram_range': [ngram_range],
+        'SVC__kernel': ['linear', 'rbf'],
+        'SVC__C': [0.001, 0.01, 0.1, 1, 10, 100, 1000],
+        'SVC__gamma': ['scale', 'auto']
+    },
+    DummyClassifier(): {
+        'TfidfVectorizer__norm': ('l1', 'l2'),
+        'TfidfVectorizer__ngram_range':[ngram_range],
+        'DummyClassifier__strategy': ['most_frequent']
+    },
+    DummyClassifier(): {
+        'TfidfVectorizer__norm': ('l1', 'l2'),
+        'TfidfVectorizer__ngram_range': [ngram_range],
+        'DummyClassifier__strategy': ['uniform']
+    }
+}
 
+estimator_model = train_tfidf_smote_estimator_grid(est_grid=est_grid, X_train=X_train, y_train=y_train, analyzer='char_wb', vocabulary=exon_vocabulary)
+
+with open(RESULTS_PATH.joinpath(f'exon_{FRAC}_{RANDOM_STATE}.pkl'), 'wb') as f:
+    pickle.dump({
+        'RANDOM_STATE': RANDOM_STATE,
+        'X_train': X_train,
+        'y_train': y_train,
+        'X_test': X_test,
+        'y_test': y_test,
+        'estimator_model': estimator_model
+    }, f)
+
+# %%
 df = _df_unspliced_features.copy()
 
 df = df.loc[df['Density'] != df['Density'].min()]
 
 unspliced_vocabulary = df['Features'].sum()
 
-df = _df_exon.copy()
-
 df = _df_unspliced.copy()
 
-df = process(df, (12,12), vocabulary=unspliced_vocabulary)
+X = df['sequence'].to_numpy()
 
-df.to_pickle(RESULTS_PATH.joinpath(f'classification_unspliced_{RANDOM_STATE}.pkl'))
+y = df['class'].to_numpy()
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.20, random_state=RANDOM_STATE)
+
+ngram_range = (12,12)
+
+est_grid = {
+    KNeighborsClassifier(): {
+        'TfidfVectorizer__norm': ('l1', 'l2'),
+        'TfidfVectorizer__ngram_range': [ngram_range],
+        'KNeighborsClassifier__n_neighbors': [3, 5, 9]
+    },
+    LogisticRegression(): {
+        'TfidfVectorizer__norm': ('l1', 'l2'),
+        'TfidfVectorizer__ngram_range': [ngram_range],
+        'LogisticRegression__C': [0.001, 0.01, 0.1, 1, 10, 100, 1000]
+    },
+    SVC(): {
+        'TfidfVectorizer__norm': ('l1', 'l2'),
+        'TfidfVectorizer__ngram_range': [ngram_range],
+        'SVC__kernel': ['linear', 'rbf'],
+        'SVC__C': [0.001, 0.01, 0.1, 1, 10, 100, 1000],
+        'SVC__gamma': ['scale', 'auto']
+    },
+    DummyClassifier(): {
+        'TfidfVectorizer__norm': ('l1', 'l2'),
+        'TfidfVectorizer__ngram_range':[ngram_range],
+        'DummyClassifier__strategy': ['most_frequent']
+    },
+    DummyClassifier(): {
+        'TfidfVectorizer__norm': ('l1', 'l2'),
+        'TfidfVectorizer__ngram_range': [ngram_range],
+        'DummyClassifier__strategy': ['uniform']
+    }
+}
+
+estimator_model = train_tfidf_smote_estimator_grid(est_grid=est_grid, X_train=X_train, y_train=y_train, analyzer='char_wb', vocabulary=unspliced_vocabulary)
+
+with open(RESULTS_PATH.joinpath(f'unspliced_{FRAC}_{RANDOM_STATE}.pkl'), 'wb') as f:
+    pickle.dump({
+        'RANDOM_STATE': RANDOM_STATE,
+        'X_train': X_train,
+        'y_train': y_train,
+        'X_test': X_test,
+        'y_test': y_test,
+        'estimator_model': estimator_model
+    }, f)
+
 
