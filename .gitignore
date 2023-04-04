@@ -162,4 +162,5 @@ materials/*.pkl
 *.log*
 materials/*.txt
 materials/*.fasta
+results/*
 _deprecated
