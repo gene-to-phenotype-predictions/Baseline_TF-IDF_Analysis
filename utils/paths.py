@@ -1,1 +1,0 @@
-primary_path = '/data0/adpatter/mouse-aging-deep-phenotyping/mouse_aging_deep_phenotyping_pipeline/materials/primary/'
