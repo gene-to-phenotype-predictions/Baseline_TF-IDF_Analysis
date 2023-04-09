@@ -20,8 +20,8 @@ run(f"jupyter nbconvert --to=python --output-dir='./' ngram_analysis.ipynb", she
 run(f"jupyter nbconvert --to=python --output-dir='./' classification.ipynb", shell=True)
 
 # %%
-# run(f"python gene_symbol_sequences.py", shell=True)
-# run(f"python ngram_analysis.py", shell=True)
+run(f"python gene_symbol_sequences.py", shell=True)
+run(f"python ngram_analysis.py", shell=True)
 run(f"python classification.py", shell=True)
 
 # %%
