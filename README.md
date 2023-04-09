@@ -17,13 +17,13 @@ The Baseline TF-IDF Analysis (WP3) provides baseline scoring using conventional 
 
 the configuration file, `config.py`, can be used in order to set:
 
-- MATERIAL_PATH:  The path for inputs (e.g., input data, intermediary data sets).
-- RESULTS_PATH:  The path for output (e.g., tables, images).
-- RANDOM_STATE: The RANDOM_STATE setting.  This setting can be hard-coded in order to ensure reproducibility.  
+- `MATERIAL_PATH`:  The path for inputs (e.g., input data, intermediary data sets).
+- `RESULTS_PATH`:  The path for output (e.g., tables, images).
+- `RANDOM_STATE`: This setting will be used as an argument to all random_state parameters.  This setting can be hard-coded in order to ensure reproducibility.  
 
 ## Usage
 
-The main entry point for the pipeline is the file named `main.py`.  Main.py will export the notebooks to .py files and run each step of the pipeline. The pipeline may take several days to run.
+The main entry point for the pipeline is the file named `main.py`.  `Main.py` will export the notebooks to `.py` files and run each step of the pipeline. The pipeline may take several days to run.
 
 Run the pipeline:
 
