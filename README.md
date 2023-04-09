@@ -6,7 +6,7 @@ The Baseline TF-IDF Analysis (WP3) provides baseline scoring using conventional 
 
 ## Installation
 
-pip install -r requirements.txt 
+`pip install -r requirements.txt` 
 
 ## Recommended Requirements
 
